@@ -10,6 +10,16 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const port = process.env.PORT || 3000;
 
 
+const crypto = require("crypto");
+
+function generateTrackingId(){
+  const prefix = "PRCL";
+  const date = new Date().toISOString().slice(0,10).replace(/-/g, "");
+  const random = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `${prefix}-${date}-${random}`;
+}
+
+
 // middleware
 app.use(express.json());
 app.use(cors());
@@ -32,6 +42,7 @@ async function run() {
 
     const db = client.db('trusteasy_loan_db');
     const applicationCollection = db.collection('loanApplications');
+    const paymentCollection = db.collection('payments');
 
 
     // loanApplication api
@@ -94,7 +105,8 @@ async function run() {
         ],
         mode: 'payment',
         metadata: {
-          applicationId: paymentInfo.applicationId
+          applicationId: paymentInfo.applicationId,
+          loanName: paymentInfo.loanTitle
         },
         customer_email: paymentInfo.userEmail,
         success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -102,6 +114,41 @@ async function run() {
       })
       console.log(session);
       res.send({ url: session.url })
+    })
+
+    app.patch('/payment-success', async(req, res) =>{
+      const sessionId = req.query.session_id;
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log('session retrieve', session);
+
+      if(session.payment_status === 'paid'){
+        const id = session.metadata.applicationId;
+        const query = { _id: new ObjectId(id) }
+        const update = {
+          $set: {
+            FeeStatus: 'paid',
+          }
+        }
+        const result = await applicationCollection.updateOne(query, update);
+        const payment = {
+          amount: session.amount_total/100,
+          currency: session.currency,
+          customerEmail: session.customer_email,
+          applicationId: session.metadata.applicationId,
+          loanName: session.metadata.loanName,
+          transactionId: session.payment_intent,
+          paymentStatus: session.payment_status,
+          paidAt: new Date(),
+          trackingId: ''
+        }
+
+        if(session.payment_status === 'paid'){
+          const resultPayment = await paymentCollection.insertOne(payment);
+          res.send({success: true, modifyApplication: result, paymentInfo: resultPayment })
+        }
+      }
+
+      res.send({success: false})
     })
 
     // old
