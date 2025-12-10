@@ -74,14 +74,15 @@ async function run() {
 
 
     // payment related apis
-    app.post('/create-checkout-session', async (req, res) => {
+
+    app.post('/payment-checkout-session', async (req, res) => {
       const paymentInfo = req.body;
-      const amount = parseInt(paymentInfo.cost);
+      const amount = parseInt(paymentInfo.cost) * 100;
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
             // Provide the exact Price ID (for example, price_1234) of the product you want to sell
-            price_data:{
+            price_data: {
               currency: 'USD',
               unit_amount: amount,
               product_data: {
@@ -91,17 +92,47 @@ async function run() {
             quantity: 1,
           },
         ],
-        customer_email: paymentInfo.userEmail,
         mode: 'payment',
         metadata: {
           applicationId: paymentInfo.applicationId
         },
-        success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success`,
+        customer_email: paymentInfo.userEmail,
+        success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.SITE_DOMAIN}/dashboard/payment-cancelled`,
       })
       console.log(session);
       res.send({ url: session.url })
     })
+
+    // old
+    // app.post('/create-checkout-session', async (req, res) => {
+    //   const paymentInfo = req.body;
+    //   const amount = parseInt(paymentInfo.cost) * 100;
+    //   const session = await stripe.checkout.sessions.create({
+    //     line_items: [
+    //       {
+    //         // Provide the exact Price ID (for example, price_1234) of the product you want to sell
+    //         price_data: {
+    //           currency: 'USD',
+    //           unit_amount: amount,
+    //           product_data: {
+    //             name: paymentInfo.loanTitle
+    //           }
+    //         },
+    //         quantity: 1,
+    //       },
+    //     ],
+    //     customer_email: paymentInfo.userEmail,
+    //     mode: 'payment',
+    //     metadata: {
+    //       applicationId: paymentInfo.applicationId
+    //     },
+    //     success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success`,
+    //     cancel_url: `${process.env.SITE_DOMAIN}/dashboard/payment-cancelled`,
+    //   })
+    //   console.log(session);
+    //   res.send({ url: session.url })
+    // })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
