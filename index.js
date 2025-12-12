@@ -73,7 +73,15 @@ async function run() {
     const usersCollection = db.collection('users');
     const applicationCollection = db.collection('loanApplications');
     const paymentCollection = db.collection('payments');
+    const loanCollection = db.collection('loans');
 
+    // loans related apis
+    app.post('/loans', async(req, res) =>{
+      const loans = req.body;
+      loans.createdAt = new Date();
+      const result = await loanCollection.insertOne(loans);
+      res.send(result);
+    })
 
     // users related apis
     app.post('/users', async(req, res) =>{
@@ -95,6 +103,19 @@ async function run() {
     app.get('/users', async(req, res) =>{
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.patch('users/:id', verifyFBToken, async(req, res) =>{
+      const status = req.body.status;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)}
+      const updatedDoc = {
+        $set: {
+          status: status
+        }
+      }
+      const result = await usersCollection.updateOne(query, updatedDoc);
       res.send(result);
     })
 
