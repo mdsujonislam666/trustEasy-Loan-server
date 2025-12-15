@@ -76,40 +76,68 @@ async function run() {
     const loanCollection = db.collection('loans');
 
     // loans related apis
-    app.post('/loans', async(req, res) =>{
+    app.post('/loans', async (req, res) => {
       const loans = req.body;
       loans.createdAt = new Date();
       const result = await loanCollection.insertOne(loans);
       res.send(result);
     })
 
+    app.get('/availableLoans', async (req, res) => {
+      const cursor = loanCollection.find({ showHome: "On" }).sort({ createdAt: -1 }).limit(6);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get('/allLoans', async (req, res) => {
+      const cursor = loanCollection.find().sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/loan-details/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await loanCollection.findOne(query);
+      res.send(result);
+    })
+
+    // app.get('/products/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const objectId = new ObjectId(id)
+    //   const filter = { _id: objectId }
+    //   const result = await productsCollection.findOne(filter);
+    //   res.send(result);
+    // })
+
+
+
     // users related apis
-    app.post('/users', async(req, res) =>{
+    app.post('/users', async (req, res) => {
       const user = req.body;
       user.role = user.role;
       user.createdAt = new Date();
       const email = user.email;
 
-      const borrowerExists = await usersCollection.findOne({email})
+      const borrowerExists = await usersCollection.findOne({ email })
 
-      if(borrowerExists){
-        return res.send({message: 'borrower exists'})
+      if (borrowerExists) {
+        return res.send({ message: 'borrower exists' })
       }
 
       const result = await usersCollection.insertOne(user);
       res.send(result);
     })
 
-    app.get('/users', async(req, res) =>{
+    app.get('/users', async (req, res) => {
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     })
 
-    app.patch('users/:id', verifyFBToken, async(req, res) =>{
+    app.patch('/users/:id', verifyFBToken, async (req, res) => {
       const status = req.body.status;
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const updatedDoc = {
         $set: {
           status: status
@@ -118,6 +146,12 @@ async function run() {
       const result = await usersCollection.updateOne(query, updatedDoc);
       res.send(result);
     })
+
+    app.get('/users/role/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email });
+      res.send({ role: user?.role });
+    });
 
 
     // loanApplication api
