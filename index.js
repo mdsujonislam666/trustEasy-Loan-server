@@ -106,7 +106,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/update-loan/:id', async(req, res) =>{
+    app.get('/update-loan/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await loanCollection.findOne(query);
@@ -129,6 +129,13 @@ async function run() {
         }
 
       );
+    })
+
+    app.delete('/loans/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await loanCollection.deleteOne(query);
+      res.send(result);
     })
 
 
