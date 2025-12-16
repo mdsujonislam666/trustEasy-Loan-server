@@ -83,6 +83,7 @@ async function run() {
       res.send(result);
     })
 
+
     app.get('/availableLoans', async (req, res) => {
       const cursor = loanCollection.find({ showHome: "Yes" }).sort({ createdAt: -1 }).limit(6);
       const result = await cursor.toArray();
@@ -104,6 +105,24 @@ async function run() {
       const cursor = loanCollection.find().sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
+    })
+
+    app.put('/adminAllLoans/:id', async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      console.log(data);
+      const query = { _id: new ObjectId(id) }
+      const update = {
+        $set: data
+      }
+      const result = await loanCollection.updateOne(query, update)
+      res.send(
+        {
+          success: true,
+          result
+        }
+
+      );
     })
 
     app.get('/update-loan/:id', async (req, res) => {
