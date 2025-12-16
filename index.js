@@ -106,14 +106,30 @@ async function run() {
       res.send(result);
     })
 
-    // app.get('/products/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const objectId = new ObjectId(id)
-    //   const filter = { _id: objectId }
-    //   const result = await productsCollection.findOne(filter);
-    //   res.send(result);
-    // })
+    app.get('/update-loan/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await loanCollection.findOne(query);
+      res.send(result);
+    })
 
+    app.put('/update-loan/:id', async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      console.log(data);
+      const query = { _id: new ObjectId(id) }
+      const update = {
+        $set: data
+      }
+      const result = await loanCollection.updateOne(query, update)
+      res.send(
+        {
+          success: true,
+          result
+        }
+
+      );
+    })
 
 
     // users related apis
