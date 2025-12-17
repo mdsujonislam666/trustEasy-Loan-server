@@ -270,6 +270,13 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/pendingLoans', async (req, res) => {
+      const query = {Status: 'Pending'}
+      const cursor = applicationCollection.find(query).sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
 
     // payment related apis
 
@@ -349,36 +356,6 @@ async function run() {
 
       res.send({ success: false })
     })
-
-    // old
-    // app.post('/create-checkout-session', async (req, res) => {
-    //   const paymentInfo = req.body;
-    //   const amount = parseInt(paymentInfo.cost) * 100;
-    //   const session = await stripe.checkout.sessions.create({
-    //     line_items: [
-    //       {
-    //         // Provide the exact Price ID (for example, price_1234) of the product you want to sell
-    //         price_data: {
-    //           currency: 'USD',
-    //           unit_amount: amount,
-    //           product_data: {
-    //             name: paymentInfo.loanTitle
-    //           }
-    //         },
-    //         quantity: 1,
-    //       },
-    //     ],
-    //     customer_email: paymentInfo.userEmail,
-    //     mode: 'payment',
-    //     metadata: {
-    //       applicationId: paymentInfo.applicationId
-    //     },
-    //     success_url: `${process.env.SITE_DOMAIN}/dashboard/payment-success`,
-    //     cancel_url: `${process.env.SITE_DOMAIN}/dashboard/payment-cancelled`,
-    //   })
-    //   console.log(session);
-    //   res.send({ url: session.url })
-    // })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
