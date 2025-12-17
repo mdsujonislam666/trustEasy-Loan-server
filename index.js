@@ -156,6 +156,20 @@ async function run() {
       const result = await loanCollection.deleteOne(query);
       res.send(result);
     })
+    app.get('/managerLoans', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email }
+      const cursor = loanCollection.find(query).sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.delete('/managerLoans/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await loanCollection.deleteOne(query);
+      res.send(result);
+    })
+
 
 
     // users related apis
