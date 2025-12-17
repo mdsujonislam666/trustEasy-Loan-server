@@ -159,6 +159,7 @@ async function run() {
 
 
     // users related apis
+
     app.post('/users', async (req, res) => {
       const user = req.body;
       user.role = user.role;
@@ -234,6 +235,16 @@ async function run() {
       const application = req.body;
       application.createdAt = new Date();
       const result = await applicationCollection.insertOne(application);
+      res.send(result);
+    })
+    app.get('/allLoanApplications', async (req, res) => {
+      const cursor = applicationCollection.find().sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+    app.get('/allLoanApplications/:id', async (req, res) => {
+      const cursor = applicationCollection.find().sort({ createdAt: -1 });
+      const result = await cursor.toArray();
       res.send(result);
     })
 
