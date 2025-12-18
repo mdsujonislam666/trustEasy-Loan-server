@@ -312,6 +312,20 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+    app.get('/approvedLoans', async (req, res) => {
+      const query = { Status: 'Approved' }
+      const cursor = applicationCollection.find(query).sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.delete('/approvedLoans/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+
+      const result = await applicationCollection.deleteOne(query);
+      res.send(result);
+    })
 
 
     // payment related apis
