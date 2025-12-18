@@ -16,6 +16,7 @@ const admin = require("firebase-admin");
 
 const serviceAccount = require('./trusteasy-loan-firebase-adminsdk.json');
 const { access } = require('fs/promises');
+const { stat } = require('fs');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -270,8 +271,43 @@ async function run() {
       res.send(result);
     })
 
+    app.patch('/pendingLoans/approve/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          Status: 'Approved',
+          approvedAt: new Date()
+        }
+      };
+      const result = await applicationCollection.updateOne(query, update);
+
+      res.send({
+        success: result.modifiedCount > 0,
+        result
+      });
+
+    })
+    app.patch('/pendingLoans/reject/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          Status: 'Rejected',
+          approvedAt: new Date()
+        }
+      };
+      const result = await applicationCollection.updateOne(query, update);
+
+      res.send({
+        success: result.modifiedCount > 0,
+        result
+      });
+
+    })
+
     app.get('/pendingLoans', async (req, res) => {
-      const query = {Status: 'Pending'}
+      const query = { Status: 'Pending' }
       const cursor = applicationCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
