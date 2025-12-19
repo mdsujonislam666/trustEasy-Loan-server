@@ -176,6 +176,7 @@ async function run() {
     // users related apis
 
     app.post('/users', async (req, res) => {
+      console.log('user hit', req.body);
       const user = req.body;
       user.role = user.role;
       user.createdAt = new Date();
@@ -186,7 +187,7 @@ async function run() {
       if (borrowerExists) {
         return res.send({ message: 'borrower exists' })
       }
-
+      user.createdAt = new Date();
       const result = await usersCollection.insertOne(user);
       res.send(result);
     })
@@ -195,6 +196,12 @@ async function run() {
       const cursor = usersCollection.find();
       const result = await cursor.toArray();
       res.send(result);
+    })
+    app.get('/user', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email }
+      const cursor = await usersCollection.findOne(query);
+      res.send(cursor);
     })
 
     app.patch('/users/:id', verifyFBToken, async (req, res) => {
