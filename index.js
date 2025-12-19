@@ -76,6 +76,20 @@ async function run() {
     const paymentCollection = db.collection('payments');
     const loanCollection = db.collection('loans');
 
+    // middle admin before allowing admin activity
+    // must be sued after verifyFBToken middleware
+    const verifyAdmin = async (req, res, next) =>{
+      const email = req.decoded_email;
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+
+      if(!user || user.role !== "Admin"){
+        return res.status(403).send({message: 'forbidden'});
+      }
+
+      next();
+    }
+
     // loans related apis
     app.post('/loans', async (req, res) => {
       const loans = req.body;
@@ -192,8 +206,17 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/users', async (req, res) => {
-      const cursor = usersCollection.find();
+    app.get('/users',verifyFBToken, async (req, res) => {
+      const searchText = req.query.searchText;
+      const query = {};
+      if(searchText){
+        query.$or = [
+          {displayName: {$regex: searchText, $options: 'i'}},
+          {email: {$regex: searchText, $options: 'i'}}
+        ]
+      }
+
+      const cursor = usersCollection.find(query).sort({createdAt: -1}).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     })
@@ -202,6 +225,33 @@ async function run() {
       const query = { email: email }
       const cursor = await usersCollection.findOne(query);
       res.send(cursor);
+    })
+
+    app.get('/users/:email/role', async(req, res) =>{
+      const email = req.params.email;
+      const query = {email}
+      const user = await usersCollection.findOne(query);
+      res.send({role: user?.role || "Borrower"})
+    })
+
+    app.get('/userDetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.patch('/users/:id/role', verifyFBToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const roleInfo = req.body;
+      const query = { _id: new ObjectId(id) }
+      const updatedDoc = {
+        $set: {
+          role: roleInfo.role
+        }
+      }
+      const result = await usersCollection.updateOne(query, updatedDoc);
+      res.send(result);
     })
 
     app.patch('/users/:id', verifyFBToken, async (req, res) => {
