@@ -75,16 +75,17 @@ async function run() {
     const applicationCollection = db.collection('loanApplications');
     const paymentCollection = db.collection('payments');
     const loanCollection = db.collection('loans');
+    const suspendReasonCollection = db.collection('suspends');
 
     // middle admin before allowing admin activity
     // must be sued after verifyFBToken middleware
-    const verifyAdmin = async (req, res, next) =>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.decoded_email;
-      const query = {email};
+      const query = { email };
       const user = await usersCollection.findOne(query);
 
-      if(!user || user.role !== "Admin"){
-        return res.status(403).send({message: 'forbidden'});
+      if (!user || user.role !== "Admin") {
+        return res.status(403).send({ message: 'forbidden' });
       }
 
       next();
@@ -194,6 +195,7 @@ async function run() {
       const user = req.body;
       user.role = user.role;
       user.createdAt = new Date();
+      user.status = "pending";
       const email = user.email;
 
       const borrowerExists = await usersCollection.findOne({ email })
@@ -206,17 +208,27 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/users',verifyFBToken, async (req, res) => {
+    app.get('/users/:email', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = { email }
+      const user = await usersCollection.findOne(query);
+      console.log(user);
+      res.send(user)
+      
+    })
+
+    app.get('/users', verifyFBToken, async (req, res) => {
       const searchText = req.query.searchText;
       const query = {};
-      if(searchText){
+      if (searchText) {
         query.$or = [
-          {displayName: {$regex: searchText, $options: 'i'}},
-          {email: {$regex: searchText, $options: 'i'}}
+          { displayName: { $regex: searchText, $options: 'i' } },
+          { email: { $regex: searchText, $options: 'i' } }
         ]
       }
 
-      const cursor = usersCollection.find(query).sort({createdAt: -1}).limit(6);
+      const cursor = usersCollection.find(query).sort({ createdAt: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result);
     })
@@ -227,11 +239,11 @@ async function run() {
       res.send(cursor);
     })
 
-    app.get('/users/:email/role', async(req, res) =>{
+    app.get('/users/:email/role', async (req, res) => {
       const email = req.params.email;
-      const query = {email}
+      const query = { email }
       const user = await usersCollection.findOne(query);
-      res.send({role: user?.role || "Borrower"})
+      res.send({ role: user?.role || "Borrower" })
     })
 
     app.get('/userDetails/:id', async (req, res) => {
@@ -384,6 +396,53 @@ async function run() {
       res.send(result);
     })
 
+
+    // suspend reason related api
+    app.post('/suspends', async (req, res) => {
+      const suspend = req.body;
+      const { userId } = suspend;
+      suspend.status = "suspend";
+      suspend.createdAt = new Date();
+      const suspendResult = await suspendReasonCollection.insertOne(suspend);
+
+      await usersCollection.updateOne(
+        { _id: new ObjectId(suspend.userId) },
+        {
+          $set: {
+            status: "suspend"
+          }
+        }
+      );
+      res.send(suspendResult);
+    })
+
+    app.patch('/users/:id/approve', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          Status: 'Approved',
+          approvedAt: new Date()
+        }
+      };
+      const result = await usersCollection.updateOne(query, update);
+
+      res.send({
+        success: result.modifiedCount > 0,
+        result
+      });
+    })
+
+    app.get('/suspends/:userId', async (req, res) => {
+      const userId = req.params.userId;
+
+      const result = await suspendReasonCollection.findOne(
+        { userId },
+        { sort: { createdAt: -1 } }
+      );
+
+      res.send(result);
+    });
 
     // payment related apis
 
