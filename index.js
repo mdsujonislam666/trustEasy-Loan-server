@@ -85,7 +85,21 @@ async function run() {
       const user = await usersCollection.findOne(query);
 
       if (!user || user.role !== "Admin") {
-        return res.status(403).send({ message: 'forbidden' });
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+
+      next();
+    }
+
+    // middle admin before allowing admin activity
+    // must be sued after verifyFBToken middleware
+    const verifyManager = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+
+      if (!user || user.role !== "Manager") {
+        return res.status(403).send({ message: 'forbidden access' });
       }
 
       next();
@@ -117,13 +131,13 @@ async function run() {
       const result = await loanCollection.findOne(query);
       res.send(result);
     })
-    app.get('/adminAllLoans', async (req, res) => {
+    app.get('/adminAllLoans', verifyFBToken, verifyAdmin, async (req, res) => {
       const cursor = loanCollection.find().sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     })
 
-    app.put('/adminAllLoans/:id', async (req, res) => {
+    app.put('/adminAllLoans/:id', verifyFBToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const data = req.body;
       console.log(data);
@@ -172,7 +186,7 @@ async function run() {
       const result = await loanCollection.deleteOne(query);
       res.send(result);
     })
-    app.get('/managerLoans', async (req, res) => {
+    app.get('/managerLoans', verifyFBToken, verifyManager, async (req, res) => {
       const email = req.query.email;
       const query = { email: email }
       const cursor = loanCollection.find(query).sort({ createdAt: -1 });
@@ -215,7 +229,7 @@ async function run() {
       const user = await usersCollection.findOne(query);
       console.log(user);
       res.send(user)
-      
+
     })
 
     app.get('/users', verifyFBToken, async (req, res) => {
@@ -284,6 +298,12 @@ async function run() {
       const user = await usersCollection.findOne({ email });
       res.send({ role: user?.role });
     });
+    app.get('/aboutUsUser', async (req, res) => {
+      const query = { role: 'Borrower' };
+      const cursor = usersCollection.find(query).sort({ createdAt: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    })
 
 
     // loanApplication api
@@ -321,12 +341,12 @@ async function run() {
       const result = await applicationCollection.insertOne(application);
       res.send(result);
     })
-    app.get('/allLoanApplications', async (req, res) => {
+    app.get('/allLoanApplications', verifyFBToken, verifyAdmin, async (req, res) => {
       const cursor = applicationCollection.find().sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     })
-    app.get('/allLoanApplications/:id', async (req, res) => {
+    app.get('/allLoanApplications/:id', verifyFBToken, verifyAdmin, async (req, res) => {
       const cursor = applicationCollection.find().sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
@@ -340,7 +360,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/pendingLoans/approve/:id', async (req, res) => {
+    app.patch('/pendingLoans/approve/:id', verifyFBToken, verifyManager, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const update = {
@@ -357,7 +377,7 @@ async function run() {
       });
 
     })
-    app.patch('/pendingLoans/reject/:id', async (req, res) => {
+    app.patch('/pendingLoans/reject/:id', verifyFBToken, verifyManager, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const update = {
@@ -375,13 +395,13 @@ async function run() {
 
     })
 
-    app.get('/pendingLoans', async (req, res) => {
+    app.get('/pendingLoans', verifyFBToken, verifyManager, async (req, res) => {
       const query = { Status: 'Pending' }
       const cursor = applicationCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
       res.send(result);
     })
-    app.get('/approvedLoans', async (req, res) => {
+    app.get('/approvedLoans', verifyFBToken, verifyManager, async (req, res) => {
       const query = { Status: 'Approved' }
       const cursor = applicationCollection.find(query).sort({ createdAt: -1 });
       const result = await cursor.toArray();
@@ -398,7 +418,7 @@ async function run() {
 
 
     // suspend reason related api
-    app.post('/suspends', async (req, res) => {
+    app.post('/suspends', verifyFBToken, verifyAdmin, async (req, res) => {
       const suspend = req.body;
       const { userId } = suspend;
       suspend.status = "suspend";
@@ -416,7 +436,7 @@ async function run() {
       res.send(suspendResult);
     })
 
-    app.patch('/users/:id/approve', async (req, res) => {
+    app.patch('/users/:id/approve', verifyFBToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const update = {
@@ -433,7 +453,7 @@ async function run() {
       });
     })
 
-    app.get('/suspends/:userId', async (req, res) => {
+    app.get('/suspends/:userId', verifyFBToken, verifyAdmin, async (req, res) => {
       const userId = req.params.userId;
 
       const result = await suspendReasonCollection.findOne(
