@@ -14,7 +14,10 @@ const crypto = require("crypto");
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require('./trusteasy-loan-firebase-adminsdk.json');
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
 const { access } = require('fs/promises');
 const { stat } = require('fs');
 
@@ -68,7 +71,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const db = client.db('trusteasy_loan_db');
     const usersCollection = db.collection('users');
@@ -453,7 +456,7 @@ async function run() {
       });
     })
 
-    app.get('/suspends/:userId', verifyFBToken, verifyAdmin, async (req, res) => {
+    app.get('/suspends/:userId', async (req, res) => {
       const userId = req.params.userId;
 
       const result = await suspendReasonCollection.findOne(
@@ -544,8 +547,8 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
